@@ -1,0 +1,310 @@
+# Homework 10 — Zynq PS and MicroBlaze
+
+Homework after Lecture 10.
+
+The project contains two implementations of a running LED system:
+
+- Task 1 — Zynq Processing System
+- Task 2 — MicroBlaze soft processor
+
+The same control logic is used in both implementations.
+
+## Functionality
+
+The LEDs implement a running pattern:
+
+```text
+LED0 -> LED1 -> LED2 -> LED3 -> LED0 -> ...
+```
+
+The system supports:
+
+- AXI Timer based LED timing
+- no software busy-loop delay
+- direction control using a switch
+- speed control using buttons
+- stop/resume using a button
+
+## Hardware
+
+Target board:
+
+- ZedBoard
+- Xilinx Zynq-7000 XC7Z020
+
+Development tools:
+
+- Vivado 2022.2
+- Vitis 2022.2
+- XSim
+
+---
+
+# Task 1 — Zynq PS
+
+The first implementation uses the ARM Cortex-A9 Processing System inside the Zynq-7000.
+
+## Block Design
+
+Main components:
+
+- Zynq Processing System
+- AXI GPIO for LEDs
+- AXI GPIO for buttons and switch
+- AXI Timer
+- AXI Interconnect
+- interrupt connection to the Zynq PS
+
+The AXI Timer generates interrupts which are used to update the LED pattern.
+
+The LED timing is therefore controlled by hardware timer interrupts instead of software delay loops.
+
+## Controls
+
+### LEDs
+
+Four LEDs are used:
+
+```text
+LED0
+LED1
+LED2
+LED3
+```
+
+### Buttons
+
+```text
+BTNC — increase speed
+BTND — decrease speed
+BTNL — stop / resume
+```
+
+### Switch
+
+```text
+SW0 — change LED running direction
+```
+
+## Zynq Software
+
+The application uses:
+
+```text
+XGpio
+XTmrCtr
+XScuGic
+```
+
+The AXI Timer interrupt sets a software event flag.
+
+The main loop processes:
+
+- timer events
+- button state changes
+- switch state
+
+The LED sequence is updated only when a timer event occurs.
+
+## Hardware Test
+
+The Zynq implementation was tested on a real ZedBoard.
+
+Hardware demonstration:
+
+```text
+hardware/zynq_running_led.MOV
+```
+
+The following functions were verified on hardware:
+
+- running LED sequence
+- speed increase
+- speed decrease
+- stop/resume
+- direction change
+
+---
+
+# Task 2 — MicroBlaze
+
+The second implementation uses a MicroBlaze soft processor implemented inside the FPGA fabric.
+
+## Block Design
+
+Main components:
+
+- MicroBlaze
+- Local BRAM
+- LMB controllers
+- AXI GPIO
+- AXI Timer
+- AXI Interrupt Controller
+- AXI Interconnect
+- Clocking Wizard
+- Processor System Reset
+
+Interrupt path:
+
+```text
+AXI Timer
+    |
+    v
+xlconcat
+    |
+    v
+AXI Interrupt Controller
+    |
+    v
+MicroBlaze INTERRUPT
+```
+
+## MicroBlaze Software
+
+The application uses:
+
+```text
+XGpio
+XTmrCtr
+XIntc
+```
+
+The software logic is equivalent to the Zynq implementation.
+
+The timer interrupt controls the LED update interval.
+
+Button edge detection is used to avoid repeated actions while a button remains pressed.
+
+## Simulation
+
+The MicroBlaze design was tested using XSim.
+
+The simulation uses the real ELF application generated in Vitis and loaded into the MicroBlaze simulation.
+
+The testbench generates:
+
+- normal LED operation
+- faster button press
+- slower button press
+- stop button press
+- resume button press
+- direction switch change
+
+For practical simulation time, the timer period is accelerated compared with the hardware implementation.
+
+## Simulation Result
+
+Waveform:
+
+```text
+screenshots/microblaze_waveform.png
+```
+
+The waveform demonstrates:
+
+```text
+1 -> 2 -> 4 -> 8 -> 1 ...
+```
+
+After changing the direction using SW0, the sequence changes to the reverse direction.
+
+The waveform also shows:
+
+- speed change
+- stop interval
+- resume
+- reverse direction
+
+---
+
+# Project Structure
+
+```text
+Homework_10_Zynq_MicroBlaze/
+|
+|-- task1_zynq/
+|   `-- Homework_10_Zynq/
+|
+|-- task2_microblaze/
+|   `-- Homework_10_MicroBlaze/
+|
+|-- hardware/
+|   `-- zynq_running_led.MOV
+|
+|-- screenshots/
+|   `-- microblaze_waveform.png
+|
+|-- .gitignore
+|
+`-- README.md
+```
+
+---
+
+# Task 1 Project Files
+
+The Zynq project contains:
+
+- Vivado project
+- Block Design
+- ZedBoard XDC constraints
+- exported XSA
+- Vitis platform
+- Vitis application source
+- Zynq application `main.c`
+
+Main application:
+
+```text
+task1_zynq/Homework_10_Zynq/running_led_zynq/src/main.c
+```
+
+---
+
+# Task 2 Project Files
+
+The MicroBlaze project contains:
+
+- Vivado project
+- Block Design
+- MicroBlaze system
+- AXI Timer
+- AXI GPIO
+- AXI Interrupt Controller
+- testbench
+- Vitis platform
+- Vitis application source
+
+Main application:
+
+```text
+task2_microblaze/Homework_10_MicroBlaze/vitis_workspace_mb/running_led_microblaze/src/main.c
+```
+
+Testbench:
+
+```text
+task2_microblaze/Homework_10_MicroBlaze/Homework_10_MicroBlaze.srcs/sim_1/new/tb_microblaze.v
+```
+
+---
+
+# Result
+
+Both implementations are completed.
+
+## Zynq PS
+
+Successfully tested on real ZedBoard hardware.
+
+## MicroBlaze
+
+Successfully tested in XSim using the application ELF generated by Vitis.
+
+The simulation confirms:
+
+- correct running LED sequence
+- timer interrupt operation
+- speed control
+- stop/resume
+- direction change
